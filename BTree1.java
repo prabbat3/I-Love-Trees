@@ -1,15 +1,11 @@
-/***
- * 
- * 
- * 	TODO: 
- * 		1. Encorporate tests for insertion/deletion.
- * 		2. Refactor code.
- * 
+/**
+ * Tests implemented by Paul Rabbat
  */
-
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 /*************************************************************************
@@ -27,39 +23,52 @@ import java.util.Random;
  *************************************************************************/
 
 public class BTree1<Key extends Comparable<Key>, Value>  {
-    private static int M;    // max children per B-tree node = M-1
-    private static long startCpuTimeNano, endCpuTimeNano;
-    private final static int[] mArr = {4,5,6,11,16,21,26};
     private Node root;             // root of the B-tree
     private int HT;                // height of the B-tree
     private int N;                 // number of key-value pairs in the B-tree
+    
+    // ADD THE STUFF BELOW THIS
+    private static long startCpuTimeNano, endCpuTimeNano;
     private static int accesses = 0, totalIterations, treeSize;
-    private static String[] keyArr, valArr;
+    private static List<Tuple> database;
     private static Random generator = new Random();
     private static int[] indexArr;
+    private static boolean debug = true;   
+    private static int M;    // max children per B-tree node = M-1
+    private final static int[] mArr = {4,5,6,11,16,21,26}; // max children values that I randomly chose
+   
     
-    public static void runTests(int _totalIterations, int _treeSize, String[] _keyArr, String[] _valArr, int[] _indexArr){
-		totalIterations = _totalIterations;
+   // ADD THIS METHOD 
+    public static List<TestResult> runTests(int _totalIterations, int _treeSize, List<Tuple> _database, int[] _indexArr){
+		List<TestResult> results = new ArrayList<TestResult>();
+    	totalIterations = _totalIterations;
 		treeSize = _treeSize;
-		valArr = _valArr;
 		indexArr = _indexArr;
-		keyArr = _keyArr;
+		database = _database;
 
-		System.out.println("********** B TREE 1 RESULTS **********\n");
+		if(debug) System.out.println("********** B TREE 1 RESULTS **********\n");
 		
+		// run the code below for different max children values
 		for(int mIndex=0;mIndex<mArr.length;mIndex++){
-			M = mArr[mIndex]; 
+			M = mArr[mIndex]; // get M (max children for this run)
 		
+			// initialize the tree
 			BTree1<String, String> st = new BTree1<String, String>();
 			
-			for(int i=0; i<valArr.length; i++){
-				st.put(keyArr[i], valArr[i]);
+			// add each node in the database to the b tree and time it
+			startCpuTimeNano = getCpuTime();
+			for(int i=0; i<database.size(); i++){
+				Tuple t = database.get(i);
+				st.put(t.getKey(), t.getAttribute());
 			}
-			
+			endCpuTimeNano = getCpuTime() - startCpuTimeNano;
+			double avgInsertionCpuTimeNano = endCpuTimeNano/totalIterations;
+
 			int index;
 			String val;
-			
 			accesses = 0;
+			
+			// search for the random nodes and find time it
 			startCpuTimeNano =  getCpuTime();
 			for(int i=0; i<totalIterations; i++){
 				index = indexArr[i];
@@ -67,15 +76,30 @@ public class BTree1<Key extends Comparable<Key>, Value>  {
 				val = st.get(keyName);
 			}
 			endCpuTimeNano =  getCpuTime() - startCpuTimeNano;
-			System.out.println("Tree size: " + st.size());
-			System.out.println("N value: " + (M-1));
-			System.out.println("Height: " + st.height());
-			System.out.println("Average search CPU time: " + (endCpuTimeNano/(totalIterations)) + " nanoseconds");
-			System.out.println("Average search accesses: " + (double)accesses/(totalIterations));
-			System.out.println("================================");
-			System.out.println();
-			// System.out.println(st);
+			double avgSearchCpuTimeNano = endCpuTimeNano/totalIterations; 
+			
+			// gather the test results
+			int size = st.size();
+			int n = M-1;
+			int height = st.height();
+			double avgSearchAccesses = (double)accesses/(totalIterations);
+			// add it to the list of results
+			results.add(new TestResult(size, n, height, avgInsertionCpuTimeNano, avgSearchCpuTimeNano, avgSearchAccesses));
+			
+			if(debug){
+				System.out.println("Tree size: " + st.size());
+				System.out.println("N value: " + (M-1));
+				System.out.println("Height: " + st.height());
+				System.out.println("Average insertion CPU time: " + avgInsertionCpuTimeNano + " nanoseconds");
+				System.out.println("Average search CPU time: " + avgSearchCpuTimeNano + " nanoseconds");
+				System.out.println("Average search accesses: " + (double)accesses/(totalIterations));
+				System.out.println("================================");
+				System.out.println();
+			}
 		}
+		
+		// return the results
+		return results;
     }
 
     // helper B-tree node data type
